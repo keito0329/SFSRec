@@ -4,7 +4,8 @@ This is the official source code for our SFSRec submitted to ECIR2026.
 
 ## Dataset
 In our experiments, we utilize five datasets, all stored in the `src/data` folder. 
-- For the Sports, Toys, Beauty, Yelp, LastFM datasets, we employed the datasets downloaded from [this repository](https://github.com/Woeee/FMLP-Rec). 
+- For the Sports, Toys, Beauty and Yelp datasets, we employed the datasets downloaded from [this repository](https://github.com/Woeee/FMLP-Rec). 
+- For LastFM, we processed the data according to the procedure outlined in [this code](https://github.com/RUCAIBox/CIKM2020-S3Rec/blob/master/data/data_process.py).
 
 
 ### How to train SFSRec
