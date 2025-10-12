@@ -19,9 +19,13 @@ class SFSRecModel(SequentialRecModel):
 
     def forward(self, input_ids, user_ids=None, all_sequence_output=False):
         sequence_emb = self.add_position_embedding(input_ids)
+        # item_encoded_layers = self.item_encoder(sequence_emb,
+        #                                         output_all_encoded_layers=True,
+        #                                         )
+        attention_mask = (input_ids > 0).long()               # [B,L]
         item_encoded_layers = self.item_encoder(sequence_emb,
-                                                output_all_encoded_layers=True,
-                                                )
+                                                attention_mask=attention_mask,
+                                                output_all_encoded_layers=True)
         if all_sequence_output:
             sequence_output = item_encoded_layers
         else:
@@ -101,17 +105,14 @@ class SFSRecEncoder(nn.Module):
 
         self.blocks = nn.ModuleList([copy.deepcopy(block) for _ in range(args.num_hidden_layers)])
 
-    def forward(self, hidden_states, output_all_encoded_layers=False):
-
-        all_encoder_layers = [ hidden_states ]
-
+    def forward(self, hidden_states, attention_mask=None, output_all_encoded_layers=False):
+        all_encoder_layers = [hidden_states]
         for layer_module in self.blocks:
-            hidden_states = layer_module(hidden_states,)
+            hidden_states = layer_module(hidden_states, attention_mask=attention_mask)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:
-            all_encoder_layers.append(hidden_states) # hidden_states => torch.Size([256, 50, 64])
-
+            all_encoder_layers.append(hidden_states)
         return all_encoder_layers
 
 class SFSRecBlock(nn.Module):
@@ -120,8 +121,8 @@ class SFSRecBlock(nn.Module):
         self.layer = SFSRecLayer(args)
         self.feed_forward = FeedForward(args)
 
-    def forward(self, hidden_states):
-        layer_output = self.layer(hidden_states)
+    def forward(self, hidden_states, attention_mask=None):
+        layer_output = self.layer(hidden_states, attention_mask=attention_mask)
         feedforward_output = self.feed_forward(layer_output)
         return feedforward_output
 
@@ -132,16 +133,19 @@ class SFSRecLayer(nn.Module):
         self.out_dropout = nn.Dropout(args.hidden_dropout_prob)
         self.LayerNorm = LayerNorm(args.hidden_size, eps=1e-12)
 
-    def forward(self, input_tensor):
-        # input_tensor: [batch, seq_len, hidden]
+    def forward(self, input_tensor, attention_mask=None):
+
         batch, seq_len, hidden = input_tensor.shape
+        if attention_mask is None:
+            mean = input_tensor.mean(dim=1, keepdim=True)
+        else:
+            mask = attention_mask.unsqueeze(-1).float()  # [B, L, 1]
+            masked_sum = torch.sum(input_tensor * mask, dim=1, keepdim=True)  # [B,1,H]
+            valid_counts = torch.clamp(mask.sum(dim=1, keepdim=True), min=1.0)
+            mean = masked_sum / valid_counts  # [B,1,H]
 
-        mean = input_tensor.mean(dim=1, keepdim=True)        # [batch, 1, hidden]
-        sequence_emb_fft = mean.expand(-1, seq_len, -1).contiguous()  # [batch, seq_len, hidden]
-
-        # 出力処理
-        hidden_states = self.out_dropout(sequence_emb_fft)
-        hidden_states = hidden_states + input_tensor
+        sequence_emb_fft = mean.expand(-1, seq_len, -1).contiguous()
+        hidden_states = self.out_dropout(sequence_emb_fft) + input_tensor
         hidden_states = self.LayerNorm(hidden_states)
 
         return hidden_states
