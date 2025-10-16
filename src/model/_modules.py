@@ -94,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         self.attn_dropout = nn.Dropout(args.attention_probs_dropout_prob)
 
         self.dense = nn.Linear(args.hidden_size, args.hidden_size)
-        self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12) # TODO
+        self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12)
         self.out_dropout = nn.Dropout(args.hidden_dropout_prob)
 
     def transpose_for_scores(self, x):

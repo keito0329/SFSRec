@@ -1,7 +1,7 @@
 
 FROM pytorch/pytorch:1.8.1-cuda11.1-cudnn8-runtime
 
-WORKDIR /home/-
+WORKDIR /home/---
 
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -25,11 +25,11 @@ RUN rm -rf /opt/conda && \
 ENV PATH="/opt/conda/bin:$PATH"
 
 
-COPY bsarec_env.yaml .
+COPY sfsrec_env.yaml .
 RUN conda update -n base -c defaults conda && \
-    conda env create -f bsarec_env.yaml
+    conda env create -f sfsrec_env.yaml
 
-SHELL ["conda", "run", "-n", "bsarec", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "sfsrec", "/bin/bash", "-c"]
 
 
 COPY . .
