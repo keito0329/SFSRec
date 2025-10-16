@@ -48,7 +48,7 @@ class SASRecModel(SequentialRecModel):
         """
         extended_attention_mask = self.get_attention_mask(input_ids)
         sequence_emb = self.add_position_embedding(input_ids)
-        # note: request attentions from item_encoder
+
         _, all_attentions = self.item_encoder(sequence_emb,
                                               extended_attention_mask,
                                               output_all_encoded_layers=True,
@@ -62,13 +62,11 @@ class SASRecModel(SequentialRecModel):
         seq_out = seq_out[:, -1, :]
         pos_ids, neg_ids = answers, neg_answers
 
-        # [batch seq_len hidden_size]
         pos_emb = self.item_embeddings(pos_ids)
         neg_emb = self.item_embeddings(neg_ids)
 
-        # [batch hidden_size]
-        seq_emb = seq_out # [batch*seq_len hidden_size]
-        pos_logits = torch.sum(pos_emb * seq_emb, -1) # [batch*seq_len]
+        seq_emb = seq_out
+        pos_logits = torch.sum(pos_emb * seq_emb, -1)
         neg_logits = torch.sum(neg_emb * seq_emb, -1)
 
         pos_labels, neg_labels = torch.ones(pos_logits.shape, device=seq_out.device), torch.zeros(neg_logits.shape, device=seq_out.device)
@@ -76,11 +74,5 @@ class SASRecModel(SequentialRecModel):
         bce_criterion = torch.nn.BCEWithLogitsLoss()
         loss = bce_criterion(pos_logits[indices], pos_labels[indices])
         loss += bce_criterion(neg_logits[indices], neg_labels[indices])
-
-        # ! start cross-entropy loss
-        # item_emb = self.item_embeddings.weight
-        # logits = torch.matmul(seq_out, item_emb.transpose(0, 1))
-        # loss = nn.CrossEntropyLoss()(logits, answers)
-        #! end cross-entropy loss
 
         return loss

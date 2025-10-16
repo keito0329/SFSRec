@@ -43,6 +43,7 @@ spectral.py
 average_duration.py
 epoch_times/
 siclrec.py
+.gitignore
 
 
 Beauty_first_inter.txt

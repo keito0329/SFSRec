@@ -77,7 +77,7 @@ def parse_args():
     parser.add_argument("--adam_beta2", default=0.999, type=float, help="adam second beta value")
     parser.add_argument("--gpu_id", default="0", type=str, help="gpu_id")
     parser.add_argument("--variance", default=5, type=float)
-    parser.add_argument("--current_epoch", type=int, default=0, help="現在のエポック数 (内部用)")
+    parser.add_argument("--current_epoch", type=int, default=0, help="current epoch")
 
     # model args
     parser.add_argument("--model_type", default='SFSRec', type=str)

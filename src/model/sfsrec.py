@@ -19,10 +19,7 @@ class SFSRecModel(SequentialRecModel):
 
     def forward(self, input_ids, user_ids=None, all_sequence_output=False):
         sequence_emb = self.add_position_embedding(input_ids)
-        # item_encoded_layers = self.item_encoder(sequence_emb,
-        #                                         output_all_encoded_layers=True,
-        #                                         )
-        attention_mask = (input_ids > 0).long()               # [B,L]
+        attention_mask = (input_ids > 0).long()
         item_encoded_layers = self.item_encoder(sequence_emb,
                                                 attention_mask=attention_mask,
                                                 output_all_encoded_layers=True)
@@ -34,65 +31,26 @@ class SFSRecModel(SequentialRecModel):
         return sequence_output
 
     def calculate_loss(self, input_ids, answers, neg_answers, same_target, user_ids):
-        #!start BPRloss
-        # seq_out = self.forward(input_ids)
-        # seq_out = seq_out[:, -1, :]
-        # pos_ids, neg_ids = answers, neg_answers
-
-        # # [batch seq_len hidden_size]
-        # pos_emb = self.item_embeddings(pos_ids)
-        # neg_emb = self.item_embeddings(neg_ids)
-
-        # # [batch hidden_size]
-        # seq_emb = seq_out # [batch*seq_len hidden_size]
-        # pos_logits = torch.sum(pos_emb * seq_emb, -1) # [batch*seq_len]
-        # neg_logits = torch.sum(neg_emb * seq_emb, -1)
-
-        # loss = torch.mean(
-        #     - torch.log(torch.sigmoid(pos_logits) + 1e-24) -
-        #     torch.log(1 - torch.sigmoid(neg_logits) + 1e-24)
-        # )
-        #! end BPRloss
-
-        #!start cross-entropy loss
-        # seq_output = self.forward(input_ids)
-        # seq_output = seq_output[:, -1, :]
-
-        # # cross-entropy loss
-        # test_item_emb = self.item_embeddings.weight
-        # logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
-        # loss = nn.CrossEntropyLoss()(logits, answers)
-
-        #!end cross-entropy loss
-
-
-        #! start binary cross-entropy loss
 
         seq_output = self.forward(input_ids)
         seq_output = seq_output[:, -1, :]
 
         pos_ids, neg_ids = answers, neg_answers
-        pos_emb = self.item_embeddings(pos_ids)      # [batch, hidden]
-        neg_emb = self.item_embeddings(neg_ids)      # [batch, hidden]
+        pos_emb = self.item_embeddings(pos_ids)
+        neg_emb = self.item_embeddings(neg_ids)
 
-        # Sequence embedding
-        seq_emb = seq_output                        # [batch, hidden]
+        seq_emb = seq_output
 
-        # Compute logits
-        pos_logits = torch.sum(pos_emb * seq_emb, dim=-1)  # [batch]
-        neg_logits = torch.sum(neg_emb * seq_emb, dim=-1)  # [batch]
+        pos_logits = torch.sum(pos_emb * seq_emb, dim=-1)
+        neg_logits = torch.sum(neg_emb * seq_emb, dim=-1)
 
-        # Create labels
         pos_labels = torch.ones_like(pos_logits)
         neg_labels = torch.zeros_like(neg_logits)
 
-        # Mask out padding positions (where pos_id == 0)
         valid_idx = (pos_ids != 0)
 
-        # Compute BCE loss on valid positions
         loss = self.bce_loss(pos_logits[valid_idx], pos_labels[valid_idx])
         loss += self.bce_loss(neg_logits[valid_idx], neg_labels[valid_idx])
-        #! end binary cross-entropy loss
 
 
         return loss
@@ -139,10 +97,10 @@ class SFSRecLayer(nn.Module):
         if attention_mask is None:
             mean = input_tensor.mean(dim=1, keepdim=True)
         else:
-            mask = attention_mask.unsqueeze(-1).float()  # [B, L, 1]
-            masked_sum = torch.sum(input_tensor * mask, dim=1, keepdim=True)  # [B,1,H]
+            mask = attention_mask.unsqueeze(-1).float()
+            masked_sum = torch.sum(input_tensor * mask, dim=1, keepdim=True)
             valid_counts = torch.clamp(mask.sum(dim=1, keepdim=True), min=1.0)
-            mean = masked_sum / valid_counts  # [B,1,H]
+            mean = masked_sum / valid_counts
 
         sequence_emb_fft = mean.expand(-1, seq_len, -1).contiguous()
         hidden_states = self.out_dropout(sequence_emb_fft) + input_tensor

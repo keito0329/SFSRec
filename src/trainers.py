@@ -116,7 +116,6 @@ class Trainer:
             rec_loss = 0.0
 
             for i, batch in rec_data_iter:
-                # 各テンソルをデバイスに送る
                 batch = tuple(t.to(self.device) for t in batch)
                 user_ids, input_ids, answers, neg_answer, same_target = batch
                 loss = self.model.calculate_loss(input_ids, answers, neg_answer, same_target, user_ids)
@@ -148,7 +147,7 @@ class Trainer:
                 batch = tuple(t.to(self.device) for t in batch)
                 user_ids, input_ids, answers, _, _ = batch
                 recommend_output = self.model.predict(input_ids, user_ids)
-                recommend_output = recommend_output[:, -1, :]  # 推薦結果の抽出
+                recommend_output = recommend_output[:, -1, :]
                 
                 rating_pred = self.predict_full(recommend_output)
                 rating_pred = rating_pred.cpu().data.numpy().copy()
@@ -171,44 +170,6 @@ class Trainer:
                 else:
                     pred_list = np.append(pred_list, batch_pred_list, axis=0)
                     answer_list = np.append(answer_list, answers.cpu().data.numpy(), axis=0)
-
-                # # ---------------------------
-                # # Attention Saving (Optional)
-                # # ---------------------------
-                # # Condition: Save directory is specified / Save limit has not been reached
-                # if self.attn_save_dir is not None and (self.attn_save_max_batches is None or saved_batch_count < self.attn_save_max_batches):
-                #     try:
-                #         with torch.no_grad():
-                #             # model.get_attentions is assumed to return a [B, H, L, L] tensor for each layer
-                #             all_attns = self.model.get_attentions(input_ids, user_ids)  # list of tensors
-                #         # all_attns: list length num_layers, each Tensor [B, H, L, L]
-                #         # Directory per batch
-                #         batch_dir = os.path.join(epoch_attn_dir, f"batch{i}")
-                #         os.makedirs(batch_dir, exist_ok=True)
-
-                #         if self.attn_save_compressed:
-                #             # Combine all layers into a single npz (compressed)
-                #             npz_dict = {}
-                #             for layer_idx, attn_tensor in enumerate(all_attns):
-                #                 attn_cpu = attn_tensor.detach().cpu()
-                #                 if self.attn_save_fp16:
-                #                     attn_cpu = attn_cpu.half()  # float16
-                #                 npz_dict[f"layer{layer_idx}"] = attn_cpu.numpy()
-                #             save_path = os.path.join(batch_dir, f"attentions_epoch{epoch}_batch{i}.npz")
-                #             np.savez_compressed(save_path, **npz_dict)
-                #         else:
-                #             # Save each layer separately as .npy
-                #             for layer_idx, attn_tensor in enumerate(all_attns):
-                #                 attn_cpu = attn_tensor.detach().cpu()
-                #                 if self.attn_save_fp16:
-                #                     attn_cpu = attn_cpu.half()
-                #                 save_path = os.path.join(batch_dir, f"layer{layer_idx}.npy")
-                #                 np.save(save_path, attn_cpu.numpy())
-
-                #         saved_batch_count += 1
-                #     except Exception as e:
-                #         # Even if saving fails, evaluation continues
-                #         self.logger.warning(f"Failed to save attentions for epoch {epoch} batch {i}: {e}")
 
             return self.get_full_sort_score(epoch, answer_list, pred_list)
 

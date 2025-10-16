@@ -12,7 +12,7 @@ class RecDataset(Dataset):
         self.user_seq = []
         self.max_len = args.max_seq_length
         self.user_ids = []
-        self.contrastive_learning = args.model_type.lower() in ['fearec', 'duorec','myfreqrec','myfreqrec2','myfreqrec3','myfreqrec_test','siclrec']
+        self.contrastive_learning = args.model_type.lower() in ['fearec', 'duorec']
         self.data_type = data_type
 
         if self.data_type=='train':
@@ -83,13 +83,9 @@ class RecDataset(Dataset):
         elif self.contrastive_learning:
             sem_augs = self.same_target_index[answer]
             
-            #!からの場合は元のを使うようにする
             if sem_augs:
                 sem_aug = random.choice(sem_augs)
-                # print(f"[DEBUG][__getitem__] raw sem_aug before pad (len={len(sem_aug)}): {sem_aug}")
             else:
-                # フォールバック: 元のシーケンスそのものを使う
-                # （必要に応じて .copy() や .clone() で深いコピーを取る）
                 sem_aug = items.copy()
             keep_random = False
             for i in range(len(sem_augs)):
