@@ -102,8 +102,8 @@ class SFSRecLayer(nn.Module):
             valid_counts = torch.clamp(mask.sum(dim=1, keepdim=True), min=1.0)
             mean = masked_sum / valid_counts
 
-        sequence_emb_fft = mean.expand(-1, seq_len, -1).contiguous()
-        hidden_states = self.out_dropout(sequence_emb_fft) + input_tensor
+        sequence_emb = mean.expand(-1, seq_len, -1).contiguous()
+        hidden_states = self.out_dropout(sequence_emb) + input_tensor
         hidden_states = self.LayerNorm(hidden_states)
 
         return hidden_states
